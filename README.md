@@ -1,62 +1,122 @@
-# Riada.Domain
+# Riada — Système de gestion de clubs de fitness
 
-Modele de domaine pour une application de gestion de clubs de fitness. Ce projet definit les 8 entites metier principales avec heritage, polymorphisme et associations.
+Application console C# (.NET 8) développée dans le cadre de l'examen de Programmation Orientée Objet.
 
-## Entites
+## Présentation
 
-1. `Person` — classe abstraite commune a Member et Employee
-2. `Member` — adherent avec contrats
-3. `Employee` — employe rattache a un club
-4. `Club` — centre de fitness
-5. `SubscriptionPlan` — plan d'abonnement (tarification)
-6. `Contract` — contrat liant un membre a un plan et un club
-7. `Invoice` — facture generee depuis un contrat
-8. `Payment` — paiement associe a une facture
+Riada est un système de gestion de clubs de fitness. Il permet de gérer les membres, les abonnements, les contrats et l'accès aux clubs via une interface console enrichie (Spectre.Console).
 
-## Fonctionnalites
+## Fonctionnalités
 
-1. **Gestion des adherents et contrats** — creer/mettre a jour un membre, rattacher un contrat et un plan d'abonnement
-2. **Facturation d'abonnement** — generer des factures periodiques a partir des contrats
-3. **Encaissement des paiements** — enregistrer les paiements et calculer le solde restant
-4. **Pilotage club et staff** — affecter des employes a un club et suivre l'activite contractuelle
+L'application offre un CRUD complet sur trois domaines, via une console interactive (Spectre.Console).
 
-## Heritage et polymorphisme
+| Domaine | Opérations |
+|---------|------------|
+| **Membres** | Ajouter · Lister (paginé) · Modifier (coordonnées) · Supprimer |
+| **Contrats** | Créer (wizard 4 étapes) · Lister (avec statut) · Modifier (abonnement) · Annuler · Supprimer |
+| **Employés** | Ajouter · Lister · Modifier (affectation) · Supprimer |
 
-- Parent : `Person` (abstraite)
-- Derivees : `Member`, `Employee`
+> Toute opération nécessitant un identifiant propose une **liste nominative** (membre, abonnement, club, contrat, employé) : aucun ID à saisir à l'aveugle. La validation (âge ≥ 16, email unique, etc.) est appliquée côté service.
 
-Methodes polymorphes :
-- `CalculateEngagementScore()` — calcul du score d'engagement (virtual/override)
-- `DescribeRole()` — description du role (virtual/override)
+## Architecture
 
-## Design Pattern : Strategy
+```
+Riada/
+├── Riada.Domain/     Entités métier, enums, exceptions, stratégies de tarification
+├── Riada.Console/    Services (Member/Contract/Employee), DTOs, menus Spectre.Console
+└── Tests/            Tests unitaires xUnit (entités, services, tarification)
+```
 
-La tarification et le calcul d'engagement peuvent varier selon les regles metier. Le pattern Strategy permet de remplacer les algorithmes sans modifier les entites.
+## Concepts POO illustrés
 
-Strategies prevues :
-- `IInvoicePricingStrategy`
-- `IEngagementScoringStrategy`
-- `IPaymentValidationStrategy`
+### Héritage et polymorphisme
+
+```
+Person (abstraite)
+├── Member    → GetDisplayInfo() affiche âge, statut, email
+└── Employee  → GetDisplayInfo() affiche rôle, club, salaire
+```
+
+La méthode abstraite `GetDisplayInfo()` est surchargée différemment dans chaque sous-classe.
+Elle est appelée dans `MemberService.MapToDto()` via une référence de type `Member` — démonstration du polymorphisme d'inclusion.
+
+### Design Pattern — Strategy (tarification)
+
+Le pattern Strategy est appliqué à la tarification des contrats :
+
+```
+IPricingStrategy
+├── StandardPricing    mensuel = prix de base, annuel = −10 %
+├── StudentPricing     mensuel = −40 %, annuel = −40 %
+└── PromotionalPricing remise configurable de 0 à 100 %
+```
+
+L'utilisateur choisit la stratégie au moment de créer un contrat. Le code client (`ContractService`) ne connaît que l'interface — les algorithmes sont interchangeables sans modifier le service.
+
+### Encapsulation
+
+Les propriétés des entités sont exposées uniquement via des accesseurs adaptés. Les règles de validation (âge, email unique) sont centralisées dans la couche service.
+
+## Classes métier (≥ 8 exigées)
+
+| Classe | Couche | Description |
+|--------|--------|-------------|
+| `Person` | Domain | Classe abstraite parente — hiérarchie d'héritage |
+| `Member` | Domain | Adhérent — hérite de Person |
+| `Employee` | Domain | Employé — hérite de Person |
+| `Club` | Domain | Centre de fitness |
+| `SubscriptionPlan` | Domain | Plan d'abonnement avec tarif de base |
+| `ServiceOption` | Domain | Option de service additionnelle |
+| `Contract` | Domain | Contrat liant un membre à un plan et un club |
+| `StandardPricing` | Domain | Implémentation standard de IPricingStrategy |
+| `StudentPricing` | Domain | Implémentation étudiant de IPricingStrategy |
+| `PromotionalPricing` | Domain | Implémentation promotionnelle de IPricingStrategy |
+
+À ces classes s'ajoutent la hiérarchie d'exceptions (`DomainException` et ses dérivées) et la couche console (`MemberService`, `ContractService`, `EmployeeService` + les menus associés).
+
+## Prérequis
+
+- .NET 8 SDK
+- MySQL 8.0 — requis pour les opérations de lecture/écriture. Si la base est
+  indisponible, l'application reste fonctionnelle (menus accessibles) et affiche
+  une erreur claire au lieu de planter.
+
+## Configuration
+
+Créer un fichier `.env` à la racine du dépôt :
+
+```
+MYSQL_CONNECTION_STRING=Server=localhost;Port=3306;Database=riada_db;Uid=root;Pwd=;
+```
+
+Sans ce fichier, la chaîne de connexion par défaut est utilisée.
+
+## Lancer l'application
+
+```bash
+dotnet run --project Riada.Console
+```
+
+Ou depuis la racine :
+
+```bash
+dotnet build Riada.sln
+dotnet run --project Riada.Console
+```
+
+## Lancer les tests
+
+```bash
+dotnet test Tests/Tests.csproj
+```
 
 ## Diagramme UML
 
-Le diagramme de classes est disponible a la racine du repository (`Diagram-UML.pdf`).
+Le diagramme de classes complet se trouve dans `docs/` :
 
-## Compilation et execution
+- `docs/Diagram-UML.svg` — **format recommandé** (vectoriel, zoomable sans perte)
+- `docs/Diagram-UML.png` — image bitmap
 
-```bash
-dotnet build
-dotnet run
-```
+Multiplicités présentes sur toutes les associations / agrégations / compositions ;
+l'héritage, la réalisation et les dépendances n'en portent pas (règle UML).
 
-## Structure
-
-```
-Riada.Domain/
-├── Riada.Domain.csproj
-├── Riada.Domain.sln
-├── Program.cs              # Point d'entree
-├── DomainEntities.cs       # 8 entites metier
-├── Diagram-UML.pdf         # Diagramme de classes UML
-└── README.md
-```
