@@ -4,6 +4,7 @@ obj/
 
 ## IDE
 .vs/
+.vscode/
 *.user
 *.suo
 
@@ -11,3 +12,9 @@ obj/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+## Secrets
+.env
+
+## Documents non livrables
+examen.pdf
